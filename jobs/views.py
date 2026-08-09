@@ -51,8 +51,13 @@ class JobSearchView(APIView):
             not search_query.last_scraped_at or 
             search_query.last_scraped_at < recent_cutoff
         ):
-            # Trigger celery scraper task asynchronously
-            run_scrapers.delay(q, location, date_hours)
+            # Trigger celery scraper task asynchronously (fallback to sync if Redis is not running)
+            try:
+                run_scrapers.delay(q, location, date_hours)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Redis unavailable ({e}), running scrapers synchronously.")
+                run_scrapers(q, location, date_hours)
             search_query.last_scraped_at = timezone.now()
             search_query.save()
             

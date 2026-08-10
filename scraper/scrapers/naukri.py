@@ -2,82 +2,92 @@ import time
 import random
 import re
 import logging
+import hashlib
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
 from django.utils import timezone
 from playwright.sync_api import sync_playwright
-from playwright_stealth import stealth_sync
 from .base import BaseScraper
 
 logger = logging.getLogger(__name__)
 
 class NaukriScraper(BaseScraper):
     def search(self, query: str, location: str, date_hours: int = 24) -> List[Dict[str, Any]]:
-        # Parse query for experience
-        exp = 0
+        # Format query and location for URL
         exp_match = re.search(r'(\d+)\s*(?:years?|yrs?|exp|experience)', query, re.IGNORECASE)
-        if exp_match:
-            exp = int(exp_match.group(1))
+        exp = int(exp_match.group(1)) if exp_match else 0
         
-        # Clean query to extract role name (remove experience keywords if present)
-        role = re.sub(r'\d+\s*(?:years?|yrs?|exp|experience)', '', query, flags=re.IGNORECASE).strip()
-        role = re.sub(r'\s+', '-', role).lower()
-        
-        # Format location
+        role_cleaned = re.sub(r'\d+\s*(?:years?|yrs?|exp|experience)', '', query, flags=re.IGNORECASE).strip()
+        role = re.sub(r'\s+', '-', role_cleaned).lower()
         loc = re.sub(r'\s+', '-', location.strip()).lower()
         
-        # Build search URL
-        # Naukri pattern: https://www.naukri.com/{role}-jobs-in-{location}?experience={exp}
-        url = f"https://www.naukri.com/{role}-jobs-in-{loc}?experience={exp}"
-        
-        logger.info(f"NaukriScraper: searching URL: {url}")
+        # Search URL pattern
+        url_base = f"https://www.naukri.com/{role}-jobs-in-{loc}"
+        if exp > 0:
+            url_base += f"?experience={exp}"
+
+        logger.info(f"NaukriScraper: searching URL: {url_base}")
         
         raw_jobs = []
         
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            # Use Chrome channel if available, fallback to Firefox (both bypass Akamai 403 Bot protection)
+            browser = None
+            try:
+                browser = p.chromium.launch(channel="chrome", headless=True, args=["--headless=new", "--disable-blink-features=AutomationControlled"])
+            except Exception:
+                try:
+                    browser = p.firefox.launch(headless=True)
+                except Exception as launch_err:
+                    logger.error(f"Failed to launch browser for Naukri: {launch_err}")
+                    return []
+
             context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                viewport={'width': 1920, 'height': 1080}
             )
             page = context.new_page()
-            stealth_sync(page)
             
             try:
-                page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                time.sleep(random.uniform(2.0, 4.0))
+                # Warmup session on homepage first to establish Akamai WAF cookies
+                page.goto("https://www.naukri.com/", wait_until="domcontentloaded", timeout=30000)
+                time.sleep(2)
                 
-                # Scrape up to 3 pages
-                for page_num in range(1, 4):
-                    logger.info(f"Scraping Naukri page {page_num}...")
+                # Max 2 pages of results
+                for page_num in range(1, 3):
+                    page_url = url_base if page_num == 1 else f"{url_base}-{page_num}"
+                    logger.info(f"Scraping Naukri page {page_num}: {page_url}")
+                    
+                    resp = page.goto(page_url, wait_until="domcontentloaded", timeout=30000)
+                    time.sleep(random.uniform(3.0, 5.0))
+                    
                     page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2);")
                     time.sleep(1.0)
                     page.evaluate("window.scrollTo(0, document.body.scrollHeight);")
                     time.sleep(1.0)
                     
-                    # Wait for job listings to load
-                    # Common selectors: article.jobTuple, .srp-jobtuple, [data-job-id]
-                    job_elements = page.query_selector_all("article.jobTuple, .srp-jobtuple, [class*='jobTuple']")
+                    # Job tuple cards on Naukri
+                    job_elements = page.query_selector_all("div.srp-jobtuple-wrapper, article.jobTuple, div.cust-job-tuple, [class*='srp-jobtuple'], [class*='cust-job-tuple']")
                     if not job_elements:
-                        logger.warning(f"No job elements found on page {page_num}")
+                        logger.warning(f"No job elements found on page {page_num} (Status: {resp.status if resp else 'N/A'})")
                         break
                         
                     for el in job_elements:
                         try:
-                            # Title
-                            title_el = el.query_selector("a.title, a.job-title, [class*='title']")
+                            # Title & URL
+                            title_el = el.query_selector("a.title, [class*='title']")
                             title = title_el.inner_text().strip() if title_el else ""
                             
-                            # URL
                             job_url = title_el.get_attribute("href") if title_el else ""
                             if job_url and not job_url.startswith("http"):
                                 job_url = "https://www.naukri.com" + job_url
                             
                             # Company
-                            company_el = el.query_selector("a.comp-name, .companyName, [class*='company']")
+                            company_el = el.query_selector("a.comp-name, [class*='comp-name'], [class*='company']")
                             company = company_el.inner_text().strip() if company_el else ""
                             
                             # Location
-                            loc_el = el.query_selector(".locWdth, .location, [class*='location']")
+                            loc_el = el.query_selector(".locWdth, .location, [class*='location'], [class*='loc']")
                             job_loc = loc_el.inner_text().strip() if loc_el else location
                             
                             # Experience
@@ -91,44 +101,28 @@ class NaukriScraper(BaseScraper):
                             if title and job_url:
                                 raw_jobs.append({
                                     "title": title,
-                                    "source_url": job_url,
                                     "company": company,
                                     "location": job_loc,
                                     "experience_required": experience,
+                                    "source_url": job_url,
                                     "posted_str": posted_str,
                                 })
                         except Exception as e:
-                            logger.error(f"Error parsing job card: {e}")
-                    
-                    # Go to next page if page_num < 3
-                    if page_num < 3:
-                        next_btn = page.query_selector("a.styles_btn-secondary__25_C2:has-text('Next'), a:has-text('Next'), .styles_btn-secondary__25_C2")
-                        if next_btn:
-                            try:
-                                next_btn.click()
-                                time.sleep(random.uniform(2.0, 4.0))
-                            except Exception as click_err:
-                                logger.warning(f"Could not click next page button: {click_err}")
-                                break
-                        else:
-                            break
+                            logger.error(f"Error parsing Naukri job card: {e}")
                             
             except Exception as e:
                 logger.error(f"Error scraping Naukri search results: {e}")
             
-            # Now visit each job URL to extract full JD and company domain
-            # Limit the requests to prevent getting blocked/timeout in demo
-            for raw_job in raw_jobs[:15]:
+            # Visit each job detail URL to extract full JD text and company domain
+            for raw_job in raw_jobs[:10]:
                 try:
                     time.sleep(random.uniform(2.0, 4.0))
                     page.goto(raw_job["source_url"], wait_until="domcontentloaded", timeout=20000)
                     
-                    # Extract JD text
-                    # Selectors for JD description in Naukri:
+                    # Extract full JD text
                     jd_el = page.query_selector(".job-desc, .description, section.job-desc, .jd-desc")
                     jd_text = jd_el.inner_text().strip() if jd_el else ""
                     if not jd_text:
-                        # Fallback to general content container
                         jd_text = page.evaluate("() => document.body.innerText")[:2000]
                     raw_job["jd_text"] = jd_text
                     
@@ -141,21 +135,26 @@ class NaukriScraper(BaseScraper):
                             domain_match = re.search(r'https?://(?:www\.)?([^/]+)', href)
                             if domain_match:
                                 company_domain = domain_match.group(1)
+                    
+                    if not company_domain and raw_job.get("company"):
+                        clean_comp = re.sub(r'[^a-zA-Z0-9]', '', raw_job["company"]).lower()
+                        company_domain = f"{clean_comp}.com"
+                        
                     raw_job["company_domain"] = company_domain
                     
                 except Exception as e:
                     logger.error(f"Error fetching JD from {raw_job['source_url']}: {e}")
                     raw_job["jd_text"] = "Job description extraction failed."
-                    raw_job["company_domain"] = ""
+                    clean_comp = re.sub(r'[^a-zA-Z0-9]', '', raw_job.get("company", "")).lower()
+                    raw_job["company_domain"] = f"{clean_comp}.com" if clean_comp else ""
             
             browser.close()
             
-        return raw_jobs
+        return self.normalize(raw_jobs)
 
     def normalize(self, raw_jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         normalized = []
         for raw in raw_jobs:
-            # Parse posted_str to a datetime
             posted_at = timezone.now()
             posted_str = raw.get("posted_str", "").lower()
             
@@ -173,6 +172,10 @@ class NaukriScraper(BaseScraper):
             company = raw.get("company", "")
             source = "naukri"
             
+            # dedup_hash = SHA256 of f"{title.lower()}{company.lower()}naukri"
+            raw_dedup_str = f"{title.lower()}{company.lower()}naukri"
+            dedup_hash = hashlib.sha256(raw_dedup_str.encode('utf-8')).hexdigest()
+            
             normalized.append({
                 "title": title,
                 "company": company,
@@ -183,6 +186,6 @@ class NaukriScraper(BaseScraper):
                 "source_url": raw.get("source_url", ""),
                 "jd_text": raw.get("jd_text", "Job description extraction failed."),
                 "posted_at": posted_at,
-                "dedup_hash": self.generate_dedup_hash(title, company, source),
+                "dedup_hash": dedup_hash,
             })
         return normalized

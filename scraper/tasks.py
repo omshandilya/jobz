@@ -11,9 +11,8 @@ logger = logging.getLogger(__name__)
 
 def execute_scraper_search(scraper, query, location, date_hours):
     try:
-        raw_results = scraper.search(query, location, date_hours)
-        normalized = scraper.normalize(raw_results)
-        return normalized
+        results = scraper.search(query, location, date_hours)
+        return results
     except Exception as e:
         logger.error(f"Error running scraper {scraper.__class__.__name__}: {e}")
         return []
@@ -21,8 +20,9 @@ def execute_scraper_search(scraper, query, location, date_hours):
 @shared_task
 def run_scrapers(query: str, location: str, date_hours: int = 24) -> int:
     """
-    Runs both scrapers in parallel, filters and dedups results,
-    and bulk saves new matching jobs to PostgreSQL.
+    Runs both scrapers (Naukri and Internshala), checks for duplicate dedup_hashes in DB,
+    applies AI relevance filtering, and saves new matching jobs to DB via bulk_create.
+    Can be run directly or via Celery.
     """
     logger.info(f"Starting run_scrapers task for query='{query}', location='{location}', date_hours={date_hours}")
     
@@ -46,7 +46,9 @@ def run_scrapers(query: str, location: str, date_hours: int = 24) -> int:
     # Deduplicate within the scraped batch itself
     unique_scraped = {}
     for job in scraped_jobs:
-        unique_scraped[job["dedup_hash"]] = job
+        dedup_hash = job.get("dedup_hash")
+        if dedup_hash and dedup_hash not in unique_scraped:
+            unique_scraped[dedup_hash] = job
         
     # Deduplicate against the database
     hashes = list(unique_scraped.keys())
@@ -63,7 +65,7 @@ def run_scrapers(query: str, location: str, date_hours: int = 24) -> int:
         logger.info("All scraped jobs already exist in the database.")
         return 0
         
-    # Run relevancy filter on new jobs only
+    # Run relevancy filter on new jobs
     filtered_jobs_data = filter_jobs(new_jobs_data)
     
     if not filtered_jobs_data:
@@ -73,24 +75,24 @@ def run_scrapers(query: str, location: str, date_hours: int = 24) -> int:
     # Prepare Django model objects
     job_objects = [
         Job(
-            title=job['title'],
-            company=job['company'],
-            company_domain=job['company_domain'],
-            location=job['location'],
-            experience_required=job['experience_required'],
-            source=job['source'],
-            source_url=job['source_url'],
-            jd_text=job['jd_text'],
-            relevancy_score=job['relevancy_score'],
-            skills_extracted=job['skills_extracted'],
-            posted_at=job['posted_at'],
-            dedup_hash=job['dedup_hash'],
+            title=job.get('title', ''),
+            company=job.get('company', ''),
+            company_domain=job.get('company_domain', ''),
+            location=job.get('location', ''),
+            experience_required=job.get('experience_required', ''),
+            source=job.get('source', ''),
+            source_url=job.get('source_url', ''),
+            jd_text=job.get('jd_text', ''),
+            relevancy_score=job.get('relevancy_score', 0.5),
+            skills_extracted=job.get('skills_extracted', []),
+            posted_at=job.get('posted_at', timezone.now()),
+            dedup_hash=job.get('dedup_hash', ''),
             is_active=True
         )
         for job in filtered_jobs_data
     ]
     
-    # Bulk save to PostgreSQL
+    # Bulk save to DB via bulk_create
     created_jobs = Job.objects.bulk_create(job_objects, ignore_conflicts=True)
     count = len(created_jobs)
     
@@ -100,14 +102,16 @@ def run_scrapers(query: str, location: str, date_hours: int = 24) -> int:
 @shared_task
 def run_periodic_scrapers() -> str:
     """
-    Periodic task triggered by Celery Beat every 6 hours.
-    Runs scrapers for all saved search queries.
+    Periodic task for running scrapers across saved queries.
     """
     queries = SearchQuery.objects.all()
     logger.info(f"Running periodic scrapers for {queries.count()} saved queries.")
     
     for q in queries:
-        run_scrapers.delay(q.query, q.location)
+        try:
+            run_scrapers.delay(q.query, q.location)
+        except Exception:
+            run_scrapers(q.query, q.location)
         q.last_scraped_at = timezone.now()
         q.save(update_fields=['last_scraped_at'])
         

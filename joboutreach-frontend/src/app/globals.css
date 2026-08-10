@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+:root {
+  --background: #F8F9FA;
+  --foreground: #111827;
+  --primary: #4F46E5;
+  --primary-hover: #4338CA;
+  --border: #E5E7EB;
+  --muted: #6B7280;
+  --card: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  background-color: var(--background);
+  color: var(--foreground);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Shimmer animation for skeletons */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Expand transition */
+.jd-expand {
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+.jd-expand.closed {
+  max-height: 0;
+  opacity: 0;
+}
+.jd-expand.open {
+  max-height: 400px;
+  opacity: 1;
+}
+
+/* Relevancy bar */
+.relevancy-bar {
+  height: 3px;
+  border-radius: 0 0 12px 12px;
+  transition: width 0.5s ease;
+}

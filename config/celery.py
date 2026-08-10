@@ -5,7 +5,7 @@ from celery.schedules import crontab
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
-app = Celery('joboutreach_backend')
+app = Celery('jobzzzz')
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
@@ -13,10 +13,10 @@ app = Celery('joboutreach_backend')
 #   should have a `CELERY_` prefix.
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Load task modules from all registered Django apps.
+# Auto-discover tasks from all registered Django apps.
 app.autodiscover_tasks()
 
-# Celery Beat Schedule
+# Beat schedule: run_scrapers every 6 hours for any saved search queries
 app.conf.beat_schedule = {
     'run-scrapers-every-6-hours': {
         'task': 'scraper.tasks.run_periodic_scrapers',

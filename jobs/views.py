@@ -6,6 +6,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Q
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Job, SearchQuery
@@ -15,6 +16,8 @@ from scraper.tasks import run_scrapers
 logger = logging.getLogger(__name__)
 
 class JobSearchView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, *args, **kwargs):
         q = request.query_params.get('q', '').strip()
         location = request.query_params.get('location', '').strip() or 'india'
@@ -125,6 +128,8 @@ class JobSearchView(APIView):
 
 
 class JobDetailView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, uuid=None, pk=None, *args, **kwargs):
         job_id = uuid or pk
         try:

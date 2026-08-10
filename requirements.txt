@@ -1,5 +1,6 @@
 django>=4.2,<5.0
 djangorestframework>=3.14.0
+djangorestframework-simplejwt>=5.3.0
 psycopg2-binary>=2.9.9
 celery>=5.3.6
 redis>=5.0.1
@@ -12,3 +13,5 @@ playwright-stealth>=1.0.6
 groq>=0.9.0
 django-cors-headers>=4.3.1
 dj-database-url>=2.1.0
+google-auth>=2.20.0
+google-auth-oauthlib>=1.0.0

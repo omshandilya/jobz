@@ -3,13 +3,18 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { Sparkles, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { searchJobs } from '@/lib/api'
 import type { Job, SortMode, SourceFilter } from '@/types/job'
+import { AuthProvider } from '@/context/AuthContext'
+import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import FilterBar from '@/components/FilterBar'
 import JobCard from '@/components/JobCard'
 import JobCardSkeleton from '@/components/JobCardSkeleton'
+import AuthModal from '@/components/AuthModal'
+import SettingsModal from '@/components/SettingsModal'
+import OutreachModal from '@/components/OutreachModal'
 
 const SUGGESTED = [
   'AI engineer delhi',
@@ -119,21 +124,13 @@ function HomeContent() {
     })
 
   return (
-    <main className="min-h-screen" style={{ background: 'var(--background)' }}>
-      {/* Header */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-sm">
-              <Sparkles size={18} className="text-white" />
-            </div>
-            <span className="text-2xl font-black text-gray-900 tracking-tight">Jobz</span>
-          </div>
-          <div className="flex-1 max-w-2xl">
-            <SearchBar initialQuery={query} onSearch={handleSearch} loading={loading} />
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
+      {/* Header Navigation */}
+      <Navbar>
+        {searched && (
+          <SearchBar initialQuery={query} onSearch={handleSearch} loading={loading} />
+        )}
+      </Navbar>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         {/* Hero — shown before first search */}
@@ -146,7 +143,7 @@ function HomeContent() {
               </span>
             </h1>
             <p className="text-lg text-gray-500 mb-8">
-              AI-powered job search across Naukri, Internshala & more — with smart relevancy scoring.
+              AI-powered job search across Naukri & Internshala — with automated recruiter outreach.
             </p>
             <div className="max-w-2xl mx-auto">
               <SearchBar initialQuery={query} onSearch={handleSearch} loading={loading} />
@@ -201,14 +198,21 @@ function HomeContent() {
           </div>
         )}
       </div>
-    </main>
+
+      {/* Auth, Settings, and Outreach Modals */}
+      <AuthModal />
+      <SettingsModal />
+      <OutreachModal />
+    </div>
   )
 }
 
 export default function Home() {
   return (
-    <Suspense>
-      <HomeContent />
-    </Suspense>
+    <AuthProvider>
+      <Suspense>
+        <HomeContent />
+      </Suspense>
+    </AuthProvider>
   )
 }

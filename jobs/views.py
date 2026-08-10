@@ -2,6 +2,7 @@ import re
 import time
 import math
 import logging
+import threading
 from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Q
@@ -66,28 +67,43 @@ class JobSearchView(APIView):
             search_query.last_scraped_at >= recent_cutoff
         )
 
-        # c. If no recent results: trigger run_scrapers.delay and wait up to 30s polling DB every 3s
+        # c. If no recent results: trigger run_scrapers in background non-blocking thread
         if not has_recent_results:
             start_time = timezone.now()
-            try:
-                run_scrapers.delay(q, location, date_hours)
-            except Exception as e:
-                logger.warning(f"Celery/Redis unavailable ({e}), running scrapers synchronously.")
-                run_scrapers(q, location, date_hours)
+
+            def run_scrapers_bg():
+                try:
+                    run_scrapers(q, location, date_hours)
+                except Exception as err:
+                    logger.error(f"Error in background scraper execution: {err}")
+
+            # Launch background thread for scraping
+            t = threading.Thread(target=run_scrapers_bg, daemon=True)
+            t.start()
 
             search_query.last_scraped_at = timezone.now()
             search_query.save()
 
-            # Poll DB up to 30 seconds (every 3 seconds) for new results
-            for _ in range(10):
-                time.sleep(3)
-                new_jobs_count = Job.objects.filter(
-                    is_active=True,
-                    relevancy_score__gte=min_score,
-                    fetched_at__gte=start_time
-                ).count()
-                if new_jobs_count > 0:
-                    break
+            # Check if matching jobs already exist in DB
+            words = [w.strip() for w in re.split(r'\s+', q) if w.strip()]
+            existing_matching = Job.objects.filter(is_active=True, relevancy_score__gte=min_score)
+            if words:
+                wq = Q()
+                for w in words:
+                    wq |= Q(title__icontains=w) | Q(jd_text__icontains=w)
+                existing_matching = existing_matching.filter(wq)
+
+            # If no matching jobs in DB yet, poll briefly (up to 12s) for fresh results
+            if not existing_matching.exists():
+                for _ in range(8):
+                    time.sleep(1.5)
+                    new_count = Job.objects.filter(
+                        is_active=True,
+                        relevancy_score__gte=min_score,
+                        fetched_at__gte=start_time
+                    ).count()
+                    if new_count > 0:
+                        break
 
         # d. Query jobs table: filter by relevancy_score >= min_score, posted_at/fetched_at >= now - date_hours, is_active=True
         queryset = Job.objects.filter(is_active=True, relevancy_score__gte=min_score)

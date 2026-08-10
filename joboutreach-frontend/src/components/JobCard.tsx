@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { MapPin, Briefcase, ExternalLink, ChevronDown, ChevronUp, Send } from 'lucide-react'
 import type { Job } from '@/types/job'
+import { useAuth } from '@/context/AuthContext'
 
 interface JobCardProps {
   job: Job
@@ -60,6 +61,7 @@ function RelativeTime({ dateStr }: { dateStr: string }) {
 
 export default function JobCard({ job }: JobCardProps) {
   const [expanded, setExpanded] = useState(false)
+  const { openOutreachModal } = useAuth()
 
   const skills = job.skills_extracted ?? []
   const visibleSkills = skills.slice(0, 4)
@@ -169,19 +171,13 @@ export default function JobCard({ job }: JobCardProps) {
           View Job <ExternalLink size={13} />
         </a>
 
-        {/* Outreach button — disabled with tooltip */}
-        <div className="relative group">
-          <button
-            disabled
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-100 text-gray-400 text-sm font-semibold cursor-not-allowed border border-gray-200"
-          >
-            Outreach <Send size={13} />
-          </button>
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-            Coming in next phase
-            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" />
-          </div>
-        </div>
+        {/* Outreach button — triggers outreach email finder & composer modal */}
+        <button
+          onClick={() => openOutreachModal(job)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-semibold transition-all border border-indigo-200 shadow-sm"
+        >
+          Outreach <Send size={13} />
+        </button>
       </div>
 
       {/* Relevancy bar at bottom */}

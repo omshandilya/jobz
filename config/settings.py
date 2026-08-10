@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'jobs',
     'scraper',
     'users',
+    'outreach',
 ]
 
 MIDDLEWARE = [

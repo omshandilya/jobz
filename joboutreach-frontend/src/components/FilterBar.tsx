@@ -41,10 +41,9 @@ export default function FilterBar({
   totalCount,
 }: FilterBarProps) {
   return (
-    <div className="space-y-3">
-      {/* Filters row */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Location */}
+    <div className="space-y-4">
+      <div className="flex flex-col xl:flex-row xl:items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
           <input
@@ -52,17 +51,16 @@ export default function FilterBar({
             value={location}
             onChange={(e) => onLocationChange(e.target.value)}
             placeholder="Location (e.g. delhi)"
-            className="pl-9 pr-4 py-2 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-44"
+            className="soft-input pl-9 pr-4 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 w-52"
           />
         </div>
 
-        {/* Date posted */}
         <div className="relative">
           <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
           <select
             value={dateHours}
             onChange={(e) => onDateHoursChange(Number(e.target.value))}
-            className="pl-9 pr-4 py-2 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+            className="soft-input pl-9 pr-4 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
           >
             {DATE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -72,38 +70,36 @@ export default function FilterBar({
           </select>
         </div>
 
-        {/* Sort */}
         <div className="relative">
           <ArrowDownUp className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
           <select
             value={sortMode}
             onChange={(e) => onSortModeChange(e.target.value as SortMode)}
-            className="pl-9 pr-4 py-2 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+            className="soft-input pl-9 pr-4 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
           >
             <option value="relevant">Most Relevant</option>
             <option value="recent">Most Recent</option>
           </select>
         </div>
+        </div>
 
-        {/* Results count */}
         {totalCount > 0 && (
-          <span className="ml-auto text-sm text-gray-500 font-medium">
+          <span className="xl:ml-auto text-sm text-slate-500 font-medium bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
             {totalCount} jobs found
           </span>
         )}
       </div>
 
-      {/* Source tabs */}
-      <div className="flex items-center gap-1">
-        <SlidersHorizontal size={14} className="text-gray-400 mr-1" />
+      <div className="flex items-center gap-2 flex-wrap">
+        <SlidersHorizontal size={14} className="text-slate-400 mr-1" />
         {SOURCE_TABS.map((tab) => (
           <button
             key={tab.value}
             onClick={() => onSourceFilterChange(tab.value)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 ${
+            className={`px-3.5 py-2 rounded-full text-xs font-semibold transition-all duration-150 ${
               sourceFilter === tab.value
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-white text-gray-600 border border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:text-blue-700'
             }`}
           >
             {tab.label}

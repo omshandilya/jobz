@@ -25,13 +25,13 @@ function SettingsCallbackContent() {
   }, [searchParams, router])
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-sm w-full text-center space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+    <div className="app-shell min-h-screen flex flex-col items-center justify-center p-4 sm:p-6">
+      <div className="section-card p-8 sm:p-10 rounded-[1.75rem] max-w-md w-full text-center space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
           <CheckCircle2 size={24} />
         </div>
-        <h2 className="text-lg font-bold text-gray-900">Processing Gmail OAuth...</h2>
-        <p className="text-xs text-gray-500">Redirecting you back to your job search dashboard...</p>
+        <h2 className="text-lg font-bold text-slate-900">Processing Gmail OAuth...</h2>
+        <p className="text-sm text-slate-600">Redirecting you back to your job search dashboard...</p>
       </div>
     </div>
   )

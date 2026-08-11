@@ -1,9 +1,8 @@
 export default function JobCardSkeleton() {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="p-5">
-        {/* Company + badge */}
-        <div className="flex items-start justify-between gap-3 mb-3">
+    <div className="section-card rounded-[1.5rem] overflow-hidden">
+      <div className="p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex-1 space-y-2">
             <div className="flex gap-2">
               <div className="shimmer h-5 w-36 rounded-md" />
@@ -14,13 +13,11 @@ export default function JobCardSkeleton() {
           <div className="shimmer h-7 w-16 rounded-full" />
         </div>
 
-        {/* Pills */}
-        <div className="flex gap-2 mb-3">
+        <div className="flex gap-2 mb-4">
           <div className="shimmer h-6 w-24 rounded-full" />
           <div className="shimmer h-6 w-20 rounded-full" />
         </div>
 
-        {/* Skills */}
         <div className="flex gap-2">
           <div className="shimmer h-5 w-14 rounded-md" />
           <div className="shimmer h-5 w-18 rounded-md" />
@@ -28,13 +25,11 @@ export default function JobCardSkeleton() {
         </div>
       </div>
 
-      {/* Buttons */}
-      <div className="px-5 pb-5 flex gap-2">
+      <div className="px-6 pb-6 flex gap-2">
         <div className="shimmer h-9 w-28 rounded-lg" />
         <div className="shimmer h-9 w-24 rounded-lg" />
       </div>
 
-      {/* Relevancy bar */}
       <div className="shimmer h-1 w-full" />
     </div>
   )

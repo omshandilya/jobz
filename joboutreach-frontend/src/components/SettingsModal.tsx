@@ -54,37 +54,34 @@ export default function SettingsModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-xl rounded-2xl shadow-xl overflow-hidden border border-gray-100 relative max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+      <div className="section-card w-full max-w-xl rounded-[1.75rem] overflow-hidden relative max-h-[90vh] flex flex-col">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
               <Sparkles size={18} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900 leading-tight">Settings & Outreach Config</h2>
-              <p className="text-xs text-gray-500">Configure Gmail OAuth & default outreach template</p>
+              <h2 className="text-lg font-bold text-slate-900 leading-tight">Settings & Outreach Config</h2>
+              <p className="text-xs text-slate-500">Configure Gmail OAuth & default outreach template</p>
             </div>
           </div>
           <button
             onClick={closeSettingsModal}
-            className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition"
+            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Content Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
-          {/* Gmail Connection Card */}
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between gap-4">
+          <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-red-500 shadow-sm shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-red-500 shadow-sm shrink-0">
                 <Mail size={20} />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-gray-900">Gmail Integration</h3>
+                  <h3 className="text-sm font-bold text-slate-900">Gmail Integration</h3>
                   {user.gmail_connected ? (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                       <CheckCircle2 size={10} /> Connected
@@ -95,7 +92,7 @@ export default function SettingsModal() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   {user.gmail_connected
                     ? `Connected email: ${user.gmail_email}`
                     : 'Authorize Gmail to send cold outreach emails directly from your account.'}
@@ -106,37 +103,36 @@ export default function SettingsModal() {
             <button
               onClick={handleConnectGmail}
               disabled={connecting}
-              className="px-4 py-2 bg-white border border-gray-300 hover:border-indigo-400 hover:text-indigo-600 text-gray-700 text-xs font-semibold rounded-lg transition shadow-sm shrink-0 flex items-center gap-1.5"
+              className="px-4 py-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-700 text-slate-700 text-xs font-semibold rounded-lg transition shadow-sm shrink-0 flex items-center gap-1.5"
             >
               {connecting ? 'Connecting...' : user.gmail_connected ? 'Reconnect' : 'Connect Gmail'}
               <ExternalLink size={12} />
             </button>
           </div>
 
-          {/* Email Template Editor */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-gray-900">Cold Email Template</label>
-              <div className="flex items-center gap-1 text-[11px] text-gray-500">
+              <label className="text-xs font-bold text-slate-900">Cold Email Template</label>
+              <div className="flex items-center gap-1 text-[11px] text-slate-500 flex-wrap justify-end">
                 Insert tags:
                 <button
                   type="button"
                   onClick={() => appendTag('{{name}}')}
-                  className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 font-mono text-[10px] text-gray-700"
+                  className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-blue-50 hover:text-blue-700 font-mono text-[10px] text-slate-700"
                 >
                   {"{{name}}"}
                 </button>
                 <button
                   type="button"
                   onClick={() => appendTag('{{job_title}}')}
-                  className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 font-mono text-[10px] text-gray-700"
+                  className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-blue-50 hover:text-blue-700 font-mono text-[10px] text-slate-700"
                 >
                   {"{{job_title}}"}
                 </button>
                 <button
                   type="button"
                   onClick={() => appendTag('{{company}}')}
-                  className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 font-mono text-[10px] text-gray-700"
+                  className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-blue-50 hover:text-blue-700 font-mono text-[10px] text-slate-700"
                 >
                   {"{{company}}"}
                 </button>
@@ -148,23 +144,22 @@ export default function SettingsModal() {
               value={template}
               onChange={(e) => setTemplate(e.target.value)}
               placeholder="Write your default outreach email template..."
-              className="w-full p-3.5 text-xs text-gray-800 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono leading-relaxed bg-white"
+              className="soft-input w-full p-3.5 text-xs text-slate-800 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono leading-relaxed bg-white"
             />
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-100 flex justify-end gap-2 bg-gray-50">
+        <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50">
           <button
             onClick={closeSettingsModal}
-            className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl transition"
+            className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl transition"
           >
             Cancel
           </button>
           <button
             onClick={handleSaveTemplate}
             disabled={saving}
-            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition shadow-sm flex items-center gap-1.5"
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition shadow-sm flex items-center gap-1.5"
           >
             <Save size={14} /> {saving ? 'Saving...' : 'Save Template'}
           </button>

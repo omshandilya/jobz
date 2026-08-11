@@ -19,7 +19,7 @@ export default function SearchBar({ initialQuery = '', onSearch, loading }: Sear
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
@@ -30,13 +30,13 @@ export default function SearchBar({ initialQuery = '', onSearch, loading }: Sear
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="backend engineer fresher delhi..."
-            className="w-full pl-12 pr-4 py-4 text-base rounded-xl border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition placeholder:text-gray-400"
+            className="soft-input w-full pl-12 pr-4 py-4 text-base rounded-2xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder:text-slate-400"
           />
         </div>
         <button
           type="submit"
           disabled={loading || !query.trim()}
-          className="px-7 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-semibold rounded-xl transition-all duration-150 flex items-center gap-2 whitespace-nowrap shadow-sm"
+          className="px-7 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold rounded-2xl transition-all duration-150 flex items-center justify-center gap-2 whitespace-nowrap shadow-sm"
         >
           {loading ? (
             <>

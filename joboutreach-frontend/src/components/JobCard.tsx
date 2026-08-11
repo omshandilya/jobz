@@ -70,52 +70,48 @@ export default function JobCard({ job }: JobCardProps) {
   const score = Math.round((job.relevancy_score ?? 0) * 100)
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-      {/* Card body — clickable to expand JD */}
+    <div className="section-card rounded-[1.5rem] overflow-hidden hover:-translate-y-0.5 transition-all duration-200">
       <div
-        className="p-5 cursor-pointer"
+        className="p-6 cursor-pointer"
         onClick={() => setExpanded((v) => !v)}
       >
-        {/* Top row */}
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="font-bold text-gray-900 text-lg leading-snug truncate">
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <span className="font-bold text-slate-900 text-lg leading-snug truncate">
                 {job.company}
               </span>
               <SourceBadge source={job.source} />
             </div>
-            <h3 className="text-base font-semibold text-indigo-700 leading-snug mb-2">
+            <h3 className="text-base font-semibold text-blue-700 leading-snug mb-3">
               {job.title}
             </h3>
 
-            {/* Pills */}
-            <div className="flex flex-wrap gap-2 mb-3">
+            <div className="flex flex-wrap gap-2 mb-4">
               {job.location && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-50 border border-gray-200 text-xs text-gray-600">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600">
                   <MapPin size={11} /> {job.location}
                 </span>
               )}
               {job.experience_required && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-50 border border-gray-200 text-xs text-gray-600">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600">
                   <Briefcase size={11} /> {job.experience_required}
                 </span>
               )}
             </div>
 
-            {/* Skills */}
             {visibleSkills.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {visibleSkills.map((skill) => (
                   <span
                     key={skill}
-                    className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-medium border border-indigo-100"
+                    className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium border border-blue-100"
                   >
                     {skill}
                   </span>
                 ))}
                 {extraCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-500 text-xs font-medium">
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-xs font-medium">
                     +{extraCount} more
                   </span>
                 )}
@@ -123,7 +119,6 @@ export default function JobCard({ job }: JobCardProps) {
             )}
           </div>
 
-          {/* Score badge + time */}
           <div className="flex flex-col items-end gap-2 shrink-0">
             <div
               className={`text-xs font-bold px-2.5 py-1 rounded-full ${
@@ -131,56 +126,52 @@ export default function JobCard({ job }: JobCardProps) {
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                   : score >= 60
                   ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                  : 'bg-gray-100 text-gray-500 border border-gray-200'
+                  : 'bg-slate-100 text-slate-500 border border-slate-200'
               }`}
             >
               {score}% match
             </div>
             <RelativeTime dateStr={job.posted_at} />
             {expanded ? (
-              <ChevronUp size={16} className="text-gray-400" />
+              <ChevronUp size={16} className="text-slate-400" />
             ) : (
-              <ChevronDown size={16} className="text-gray-400" />
+              <ChevronDown size={16} className="text-slate-400" />
             )}
           </div>
         </div>
       </div>
 
-      {/* Expandable JD preview */}
       <div className={`jd-expand ${expanded ? 'open' : 'closed'}`}>
         {job.jd_preview && (
-          <div className="px-5 pb-3">
-            <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 text-sm text-gray-600 leading-relaxed">
+          <div className="px-6 pb-4">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-sm text-slate-600 leading-relaxed">
               {job.jd_preview}
             </div>
           </div>
         )}
       </div>
 
-      {/* Action buttons */}
       <div
-        className="px-5 pb-5 flex gap-2"
+        className="px-6 pb-6 flex flex-wrap gap-2"
         onClick={(e) => e.stopPropagation()}
       >
         <a
           href={job.source_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-all duration-150 shadow-sm"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-all duration-150 shadow-sm"
         >
           View Job <ExternalLink size={13} />
         </a>
 
-        {/* Outreach button — triggers outreach email finder & composer modal */}
         <button
           onClick={() => openOutreachModal(job)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-semibold transition-all border border-indigo-200 shadow-sm"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-semibold transition-all border border-blue-200 shadow-sm"
         >
           Outreach <Send size={13} />
         </button>
       </div>
 
-      {/* Relevancy bar at bottom */}
       <RelevancyBar score={job.relevancy_score} />
     </div>
   )

@@ -11,10 +11,14 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Job, SearchQuery
-from .serializers import JobSerializer, JobDetailSerializer, SearchQuerySerializer
-from scraper.tasks import run_scrapers
+from .serializers import JobSerializer, JobDetailSerializer
+from scraper.tasks import run_scrapers, scrape_internshala, scrape_naukri, scrape_indeed
 
 logger = logging.getLogger(__name__)
+
+# How long after a search was triggered do we consider scrapers potentially still running?
+_SCRAPING_ACTIVE_WINDOW_SECONDS = 180  # 3 minutes
+
 
 class JobSearchView(APIView):
     permission_classes = [AllowAny]
@@ -22,7 +26,7 @@ class JobSearchView(APIView):
     def get(self, request, *args, **kwargs):
         q = request.query_params.get('q', '').strip()
         location = request.query_params.get('location', '').strip() or 'india'
-        
+
         try:
             date_hours = int(request.query_params.get('date_hours', 24))
         except (ValueError, TypeError):
@@ -34,16 +38,12 @@ class JobSearchView(APIView):
             min_score = 0.6
 
         try:
-            page = int(request.query_params.get('page', 1))
-            if page < 1:
-                page = 1
+            page = max(1, int(request.query_params.get('page', 1)))
         except (ValueError, TypeError):
             page = 1
 
         try:
-            page_size = int(request.query_params.get('page_size', 20))
-            if page_size < 1:
-                page_size = 20
+            page_size = max(1, int(request.query_params.get('page_size', 20)))
         except (ValueError, TypeError):
             page_size = 20
 
@@ -59,7 +59,7 @@ class JobSearchView(APIView):
             location=location.lower()
         )
 
-        # b. Check if jobs exist in DB for this query fetched in last 1 hour
+        # b. Check if scrapers were triggered recently (within 1 hour)
         recent_cutoff = timezone.now() - timedelta(hours=1)
         has_recent_results = (
             not created and
@@ -67,24 +67,34 @@ class JobSearchView(APIView):
             search_query.last_scraped_at >= recent_cutoff
         )
 
-        # c. If no recent results: trigger run_scrapers in background non-blocking thread
+        # c. If not recently scraped, dispatch all 3 Celery tasks
         if not has_recent_results:
             start_time = timezone.now()
 
-            def run_scrapers_bg():
-                try:
-                    run_scrapers(q, location, date_hours)
-                except Exception as err:
-                    logger.error(f"Error in background scraper execution: {err}")
-
-            # Launch background thread for scraping
-            t = threading.Thread(target=run_scrapers_bg, daemon=True)
-            t.start()
+            dispatched_via_celery = False
+            try:
+                # Dispatch all 3 tasks independently so each saves to DB as it finishes
+                scrape_internshala.delay(q, location, date_hours)
+                scrape_naukri.delay(q, location, date_hours)
+                scrape_indeed.delay(q, location, date_hours)
+                dispatched_via_celery = True
+                logger.info(f"Dispatched 3 Celery scraper tasks for '{q}' in '{location}'")
+            except Exception as celery_err:
+                # Celery worker not reachable — fall back to background thread
+                logger.warning(
+                    f"Celery dispatch failed ({celery_err}), falling back to threading.Thread"
+                )
+                def _run_bg():
+                    try:
+                        run_scrapers(q, location, date_hours)
+                    except Exception as err:
+                        logger.error(f"Background scraper error: {err}")
+                threading.Thread(target=_run_bg, daemon=True).start()
 
             search_query.last_scraped_at = timezone.now()
             search_query.save()
 
-            # Check if matching jobs already exist in DB
+            # d. Poll DB for up to 12s waiting for Internshala results (fast scraper)
             words = [w.strip() for w in re.split(r'\s+', q) if w.strip()]
             existing_matching = Job.objects.filter(is_active=True, relevancy_score__gte=min_score)
             if words:
@@ -93,28 +103,26 @@ class JobSearchView(APIView):
                     wq |= Q(title__icontains=w) | Q(jd_text__icontains=w)
                 existing_matching = existing_matching.filter(wq)
 
-            # If no matching jobs in DB yet, poll briefly (up to 12s) for fresh results
             if not existing_matching.exists():
                 for _ in range(8):
                     time.sleep(1.5)
                     new_count = Job.objects.filter(
                         is_active=True,
                         relevancy_score__gte=min_score,
-                        fetched_at__gte=start_time
+                        fetched_at__gte=start_time,
                     ).count()
                     if new_count > 0:
                         break
 
-        # d. Query jobs table: filter by relevancy_score >= min_score, posted_at/fetched_at >= now - date_hours, is_active=True
+        # e. Build queryset
         queryset = Job.objects.filter(is_active=True, relevancy_score__gte=min_score)
-        
+
         cutoff_date = timezone.now() - timedelta(hours=date_hours)
         queryset = queryset.filter(Q(posted_at__gte=cutoff_date) | Q(fetched_at__gte=cutoff_date))
 
         if location and location.lower() != 'all':
             queryset = queryset.filter(location__icontains=location)
 
-        # e. Search filter: jobs where title or jd_text icontains any word from q
         words = [w.strip() for w in re.split(r'\s+', q) if w.strip()]
         if words:
             word_query = Q()
@@ -122,24 +130,28 @@ class JobSearchView(APIView):
                 word_query |= Q(title__icontains=word) | Q(jd_text__icontains=word)
             queryset = queryset.filter(word_query)
 
-        # f. Sort: relevancy_score DESC, posted_at DESC
         queryset = queryset.order_by('-relevancy_score', '-posted_at')
 
-        # g. Paginate and return response: {"count": 45, "page": 1, "total_pages": 3, "results": [...jobs]}
+        # f. Paginate
         count = queryset.count()
         total_pages = math.ceil(count / page_size) if count > 0 else 1
-
-        start = (page - 1) * page_size
-        end = start + page_size
-        paginated_jobs = queryset[start:end]
+        paginated_jobs = queryset[(page - 1) * page_size: page * page_size]
 
         serializer = JobSerializer(paginated_jobs, many=True)
+
+        # g. scraping_active = True if scrapers were triggered within the last 3 minutes
+        #    Frontend uses this to decide whether to keep polling for new jobs.
+        scraping_active = (
+            search_query.last_scraped_at is not None and
+            search_query.last_scraped_at >= timezone.now() - timedelta(seconds=_SCRAPING_ACTIVE_WINDOW_SECONDS)
+        )
 
         return Response({
             "count": count,
             "page": page,
             "total_pages": total_pages,
-            "results": serializer.data
+            "scraping_active": scraping_active,
+            "results": serializer.data,
         })
 
 

@@ -18,6 +18,7 @@ export interface SearchResponse {
   count: number
   page: number
   total_pages: number
+  scraping_active: boolean
   results: Job[]
 }
 

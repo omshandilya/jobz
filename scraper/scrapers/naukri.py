@@ -17,8 +17,14 @@ try:
     from playwright_stealth import stealth_sync
     _STEALTH_AVAILABLE = True
 except ImportError:
-    _STEALTH_AVAILABLE = False
-    logger.warning("playwright-stealth not installed. Bot detection risk is higher.")
+    try:
+        from playwright_stealth import Stealth
+        def stealth_sync(page):
+            Stealth().apply_stealth_sync(page)
+        _STEALTH_AVAILABLE = True
+    except ImportError:
+        _STEALTH_AVAILABLE = False
+        logger.warning("playwright-stealth not installed. Bot detection risk is higher.")
 
 
 class NaukriScraper(BaseScraper):

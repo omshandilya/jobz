@@ -19,7 +19,33 @@ api.interceptors.request.use((config) => {
 })
 
 // Jobs APIs
+
+/**
+ * Initial search — triggers scrapers and waits up to 12s for Internshala results.
+ */
 export async function searchJobs(
+  q: string,
+  location: string = 'india',
+  date_hours: number = 24
+): Promise<SearchResponse> {
+  const { data } = await api.get<SearchResponse>('/api/jobs/search/', {
+    params: {
+      q,
+      location,
+      date_hours,
+      min_score: 0.0,
+      page_size: 50,
+    },
+  })
+  return data
+}
+
+/**
+ * Polling search — called every 10s after the initial search to pick up
+ * Naukri and Indeed jobs as they arrive in the background.
+ * Returns the same response shape as searchJobs, including scraping_active.
+ */
+export async function pollJobs(
   q: string,
   location: string = 'india',
   date_hours: number = 24

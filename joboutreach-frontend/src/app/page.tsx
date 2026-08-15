@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { Search } from 'lucide-react'
-import { searchJobs } from '@/lib/api'
+import { Search, RefreshCw } from 'lucide-react'
+import { searchJobs, pollJobs } from '@/lib/api'
 import type { Job, SortMode, SourceFilter } from '@/types/job'
 import { AuthProvider } from '@/context/AuthContext'
 import Navbar from '@/components/Navbar'
@@ -23,6 +23,11 @@ const SUGGESTED = [
   'python developer remote',
   'data engineer hyderabad',
 ]
+
+// How often to poll for new jobs after the initial search (ms)
+const POLL_INTERVAL_MS = 10_000
+// Stop polling after this many ms regardless (3 minutes)
+const POLL_MAX_DURATION_MS = 180_000
 
 function EmptyState({ onSuggest }: { onSuggest: (q: string) => void }) {
   return (
@@ -47,6 +52,13 @@ function EmptyState({ onSuggest }: { onSuggest: (q: string) => void }) {
   )
 }
 
+/** Merge incoming jobs into existing list by id — no duplicates */
+function mergeJobs(existing: Job[], incoming: Job[]): Job[] {
+  const seen = new Set(existing.map((j) => j.id))
+  const newOnes = incoming.filter((j) => !seen.has(j.id))
+  return newOnes.length > 0 ? [...existing, ...newOnes] : existing
+}
+
 function HomeContent() {
   const router = useRouter()
   const params = useSearchParams()
@@ -60,21 +72,92 @@ function HomeContent() {
   const [allJobs, setAllJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
+  const [isPolling, setIsPolling] = useState(false)
+  const [newJobsFound, setNewJobsFound] = useState(0)
+
+  // Refs to control the polling interval without triggering re-renders
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollDeadlineRef = useRef<number>(0)
+  const currentQueryRef = useRef({ q: '', loc: '', hours: 0 })
+
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
+    }
+    setIsPolling(false)
+  }, [])
+
+  const startPolling = useCallback(
+    (q: string, loc: string, hours: number) => {
+      stopPolling()
+      setNewJobsFound(0)
+      currentQueryRef.current = { q, loc, hours }
+      pollDeadlineRef.current = Date.now() + POLL_MAX_DURATION_MS
+      setIsPolling(true)
+
+      pollIntervalRef.current = setInterval(async () => {
+        // Stop if deadline exceeded
+        if (Date.now() >= pollDeadlineRef.current) {
+          stopPolling()
+          return
+        }
+
+        try {
+          const { q: pq, loc: ploc, hours: phours } = currentQueryRef.current
+          const res = await pollJobs(pq, ploc, phours)
+
+          // Merge new jobs into the existing list (append only, no full replace)
+          setAllJobs((prev) => {
+            const merged = mergeJobs(prev, res.results)
+            const added = merged.length - prev.length
+            if (added > 0) {
+              setNewJobsFound((n) => n + added)
+            }
+            return merged
+          })
+
+          // If backend signals scrapers are done, stop polling
+          if (!res.scraping_active) {
+            stopPolling()
+          }
+        } catch {
+          // Silently ignore poll errors — don't interrupt the user
+        }
+      }, POLL_INTERVAL_MS)
+    },
+    [stopPolling]
+  )
+
+  // Clean up interval on unmount
+  useEffect(() => {
+    return () => stopPolling()
+  }, [stopPolling])
 
   const doSearch = useCallback(
     async (q: string, loc: string, hours: number) => {
       if (!q.trim()) return
       setLoading(true)
       setSearched(true)
+      setAllJobs([])
+      setNewJobsFound(0)
+      stopPolling()
+
       const toastId = toast.loading('Searching for jobs...')
       try {
         const res = await searchJobs(q, loc, hours)
         setAllJobs(res.results)
         toast.dismiss(toastId)
+
         if (res.count > 0) {
-          toast.success(`Found ${res.count} job${res.count !== 1 ? 's' : ''}`)
+          toast.success(`Found ${res.count} job${res.count !== 1 ? 's' : ''} — checking Naukri & Indeed...`)
         } else {
-          toast.info('No jobs found. Try different keywords.')
+          toast.info('Fetching from Naukri & Indeed in the background...')
+        }
+
+        // Always start polling if scrapers are still active
+        if (res.scraping_active !== false) {
+          startPolling(q, loc, hours)
         }
       } catch {
         toast.dismiss(toastId)
@@ -84,7 +167,7 @@ function HomeContent() {
         setLoading(false)
       }
     },
-    []
+    [startPolling, stopPolling]
   )
 
   // Auto-trigger on load if URL params are present
@@ -147,7 +230,7 @@ function HomeContent() {
                 </span>
               </h1>
               <p className="mx-auto max-w-2xl text-base sm:text-lg text-slate-600 mb-8">
-                Search across Naukri and Internshala with less clutter, clearer filters, and a calmer results view.
+                Search across Naukri, Indeed, and Internshala with less clutter, clearer filters, and a calmer results view.
               </p>
               <div className="max-w-3xl mx-auto">
                 <SearchBar initialQuery={query} onSearch={handleSearch} loading={loading} />
@@ -181,6 +264,21 @@ function HomeContent() {
               onSortModeChange={setSortMode}
               totalCount={filteredJobs.length}
             />
+          </div>
+        )}
+
+        {/* "Fetching more..." banner — shown while background scrapers are running */}
+        {isPolling && searched && !loading && (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-blue-50 border border-blue-100 text-sm text-blue-700 font-medium">
+            <RefreshCw size={14} className="animate-spin shrink-0" />
+            <span>
+              Fetching from Naukri &amp; Indeed in the background
+              {newJobsFound > 0 && (
+                <span className="ml-1 font-semibold text-blue-800">
+                  — {newJobsFound} new job{newJobsFound !== 1 ? 's' : ''} added
+                </span>
+              )}
+            </span>
           </div>
         )}
 

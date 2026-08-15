@@ -34,69 +34,65 @@ function EmptyState({ onSuggest }: { onSuggest: (q: string) => void }) {
       <p className="text-gray-500 text-sm mb-6">Try different keywords or broaden your search</p>
       <div className="flex flex-wrap gap-2 justify-center">
         {SUGGESTED.map((s) => (
-          <div className="app-shell min-h-screen">
+          <button
+            key={s}
             onClick={() => onSuggest(s)}
-            className="px-4 py-2 rounded-full bg-white border border-gray-200 text-sm text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-all font-medium shadow-sm"
+            className="px-4 py-2 rounded-full bg-white border border-slate-200 text-sm text-blue-700 hover:border-blue-300 hover:bg-blue-50 transition-all font-medium shadow-sm"
           >
             {s}
           </button>
         ))}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
+      </div>
+    </div>
   )
-                <div className="section-card relative overflow-hidden rounded-[2rem] px-6 py-12 sm:px-10 sm:py-16 text-center">
-                  <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_40%)]" />
-                  <div className="relative">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-4 py-1 text-xs font-semibold text-blue-700 mb-6">
-                      AI-powered job search and outreach
-                    </div>
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight mb-4">
-                      Find jobs.{' '}
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-sky-600 to-cyan-600">
-                        Reach the right people.
-                      </span>
-                    </h1>
-                    <p className="mx-auto max-w-2xl text-base sm:text-lg text-slate-600 mb-8">
-                      Search across Naukri and Internshala with less clutter, clearer filters, and a calmer results view.
-                    </p>
-                    <div className="max-w-3xl mx-auto">
-                      <SearchBar initialQuery={query} onSearch={handleSearch} loading={loading} />
-                    </div>
-                    <div className="mt-6 flex flex-wrap gap-2 justify-center">
-                      {SUGGESTED.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => handleSuggest(s)}
-                          className="px-4 py-2 rounded-full bg-white border border-slate-200 text-sm text-blue-700 hover:border-blue-300 hover:bg-blue-50 transition-all font-medium shadow-sm"
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+}
 
-              {searched && (
-                <div className="section-card rounded-2xl px-4 py-4 sm:px-5 sm:py-5">
-                  <FilterBar
-                    location={location}
-                    onLocationChange={setLocation}
-                    dateHours={dateHours}
-                    onDateHoursChange={setDateHours}
-                    sourceFilter={sourceFilter}
-                    onSourceFilterChange={setSourceFilter}
-                    sortMode={sortMode}
-                    onSortModeChange={setSortMode}
-                    totalCount={filteredJobs.length}
-                  />
-                </div>
-              )}
+function HomeContent() {
+  const router = useRouter()
+  const params = useSearchParams()
 
-              {loading && (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <JobCardSkeleton key={i} />
+  const [query, setQuery] = useState(params.get('q') ?? '')
+  const [location, setLocation] = useState(params.get('location') ?? 'india')
+  const [dateHours, setDateHours] = useState(Number(params.get('hours') ?? 720))
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
+  const [sortMode, setSortMode] = useState<SortMode>('relevant')
+
+  const [allJobs, setAllJobs] = useState<Job[]>([])
+  const [loading, setLoading] = useState(false)
+  const [searched, setSearched] = useState(false)
+
+  const doSearch = useCallback(
+    async (q: string, loc: string, hours: number) => {
+      if (!q.trim()) return
+      setLoading(true)
+      setSearched(true)
+      const toastId = toast.loading('Searching for jobs...')
+      try {
         const res = await searchJobs(q, loc, hours)
+        setAllJobs(res.results)
+        toast.dismiss(toastId)
+        if (res.count > 0) {
+          toast.success(`Found ${res.count} job${res.count !== 1 ? 's' : ''}`)
+        } else {
+          toast.info('No jobs found. Try different keywords.')
+        }
+      } catch {
+        toast.dismiss(toastId)
+        toast.error('Search failed. Check if backend is running.')
+        setAllJobs([])
+      } finally {
+        setLoading(false)
+      }
+    },
+    []
+  )
+
+  // Auto-trigger on load if params present
+  useEffect(() => {
+    const q = params.get('q')
+    const loc = params.get('location') ?? 'india'
+    const hours = Number(params.get('hours') ?? 720)
+    if (q) {
       setQuery(q)
       setLocation(loc)
       setDateHours(hours)
@@ -128,62 +124,66 @@ function EmptyState({ onSuggest }: { onSuggest: (q: string) => void }) {
     })
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
-      {/* Header Navigation */}
+    <div className="app-shell min-h-screen">
       <Navbar>
         {searched && (
           <SearchBar initialQuery={query} onSearch={handleSearch} loading={loading} />
         )}
       </Navbar>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        {/* Hero — shown before first search */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
         {!searched && (
-          <div className="text-center py-12">
-            <h1 className="text-5xl font-black text-gray-900 tracking-tight mb-3">
-              Find jobs.{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600">
-                Reach the right people.
-              </span>
-            </h1>
-            <p className="text-lg text-gray-500 mb-8">
-              AI-powered job search across Naukri & Internshala — with automated recruiter outreach.
-            </p>
-            <div className="max-w-2xl mx-auto">
-              <SearchBar initialQuery={query} onSearch={handleSearch} loading={loading} />
-            </div>
-            <div className="mt-6 flex flex-wrap gap-2 justify-center">
-              {SUGGESTED.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => handleSuggest(s)}
-                  className="px-4 py-2 rounded-full bg-white border border-gray-200 text-sm text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-all font-medium shadow-sm"
-                >
-                  {s}
-                </button>
-              ))}
+          <div className="section-card relative overflow-hidden rounded-[2rem] px-6 py-12 sm:px-10 sm:py-16 text-center">
+            <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_40%)]" />
+            <div className="relative">
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-4 py-1 text-xs font-semibold text-blue-700 mb-6">
+                AI-powered job search and outreach
+              </div>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight mb-4">
+                Find jobs.{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-sky-600 to-cyan-600">
+                  Reach the right people.
+                </span>
+              </h1>
+              <p className="mx-auto max-w-2xl text-base sm:text-lg text-slate-600 mb-8">
+                Search across Naukri and Internshala with less clutter, clearer filters, and a calmer results view.
+              </p>
+              <div className="max-w-3xl mx-auto">
+                <SearchBar initialQuery={query} onSearch={handleSearch} loading={loading} />
+              </div>
+              <div className="mt-6 flex flex-wrap gap-2 justify-center">
+                {SUGGESTED.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleSuggest(s)}
+                    className="px-4 py-2 rounded-full bg-white border border-slate-200 text-sm text-blue-700 hover:border-blue-300 hover:bg-blue-50 transition-all font-medium shadow-sm"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Filters */}
         {searched && (
-          <FilterBar
-            location={location}
-            onLocationChange={setLocation}
-            dateHours={dateHours}
-            onDateHoursChange={setDateHours}
-            sourceFilter={sourceFilter}
-            onSourceFilterChange={setSourceFilter}
-            sortMode={sortMode}
-            onSortModeChange={setSortMode}
-            totalCount={filteredJobs.length}
-          />
+          <div className="section-card rounded-2xl px-4 py-4 sm:px-5 sm:py-5">
+            <FilterBar
+              location={location}
+              onLocationChange={setLocation}
+              dateHours={dateHours}
+              onDateHoursChange={setDateHours}
+              sourceFilter={sourceFilter}
+              onSourceFilterChange={setSourceFilter}
+              sortMode={sortMode}
+              onSortModeChange={setSortMode}
+              totalCount={filteredJobs.length}
+            />
+          </div>
         )}
 
-        {/* Results */}
         {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <JobCardSkeleton key={i} />
             ))}

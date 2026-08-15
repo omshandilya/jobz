@@ -87,7 +87,7 @@ function HomeContent() {
     []
   )
 
-  // Auto-trigger on load if params present
+  // Auto-trigger on load if URL params are present
   useEffect(() => {
     const q = params.get('q')
     const loc = params.get('location') ?? 'india'
@@ -132,6 +132,7 @@ function HomeContent() {
       </Navbar>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
+        {/* Hero section — shown before first search */}
         {!searched && (
           <div className="section-card relative overflow-hidden rounded-[2rem] px-6 py-12 sm:px-10 sm:py-16 text-center">
             <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_40%)]" />
@@ -166,6 +167,7 @@ function HomeContent() {
           </div>
         )}
 
+        {/* Filter bar — shown after first search */}
         {searched && (
           <div className="section-card rounded-2xl px-4 py-4 sm:px-5 sm:py-5">
             <FilterBar
@@ -182,6 +184,7 @@ function HomeContent() {
           </div>
         )}
 
+        {/* Loading skeletons */}
         {loading && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -190,10 +193,12 @@ function HomeContent() {
           </div>
         )}
 
+        {/* Empty state */}
         {!loading && searched && filteredJobs.length === 0 && (
           <EmptyState onSuggest={handleSuggest} />
         )}
 
+        {/* Job results grid */}
         {!loading && filteredJobs.length > 0 && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6">
             {filteredJobs.map((job) => (
@@ -203,6 +208,7 @@ function HomeContent() {
         )}
       </div>
 
+      {/* Global modals */}
       <AuthModal />
       <SettingsModal />
       <OutreachModal />

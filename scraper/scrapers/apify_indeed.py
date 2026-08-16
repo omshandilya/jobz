@@ -61,17 +61,29 @@ class ApifyIndeedScraper(BaseScraper):
             if posted_str:
                 try:
                     if isinstance(posted_str, int):
-                        # Assuming timestamp is in milliseconds
+                        # Timestamp in milliseconds
                         posted_at = timezone.datetime.fromtimestamp(posted_str / 1000.0, tz=timezone.utc)
                     else:
-                        parsed_date = parse_date(str(posted_str))
-                        if timezone.is_naive(parsed_date):
-                            posted_at = timezone.make_aware(parsed_date)
+                        s = str(posted_str).lower().strip()
+                        if any(w in s for w in ["today", "just now", "hour", "minute"]):
+                            posted_at = timezone.now()
+                        elif "yesterday" in s:
+                            posted_at = timezone.now() - timezone.timedelta(days=1)
                         else:
-                            posted_at = parsed_date
+                            # "N days ago" or "30+ days ago"
+                            days_match = re.search(r'(\d+)\+?\s*days?\s*ago', s)
+                            if days_match:
+                                posted_at = timezone.now() - timezone.timedelta(days=int(days_match.group(1)))
+                            else:
+                                parsed_date = parse_date(str(posted_str))
+                                posted_at = (
+                                    timezone.make_aware(parsed_date)
+                                    if timezone.is_naive(parsed_date)
+                                    else parsed_date
+                                )
                 except Exception:
-                    logger.warning(f"Could not parse date: {posted_str}")
-                    pass
+                    logger.debug(f"Could not parse date: {posted_str}")
+
 
             source = "indeed"
             raw_dedup_str = f"{title.lower()}{company.lower()}indeed"

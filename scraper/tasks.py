@@ -8,6 +8,7 @@ from scraper.scrapers.internshala import InternshalaScraper
 from scraper.scrapers.naukri import NaukriScraper
 from scraper.scrapers.apify_naukri import ApifyNaukriScraper
 from scraper.scrapers.apify_indeed import ApifyIndeedScraper
+from scraper.scrapers.indeed import IndeedScraper
 from scraper.filter import filter_jobs
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 # Shared helper — dedup, filter, save
 # ---------------------------------------------------------------------------
 
-def _save_jobs(jobs_data: list, source_label: str = "") -> int:
+def _save_jobs(jobs_data: list, source_label: str = "", user_query: str = "") -> int:
     """
     Deduplicates a batch of normalized job dicts against each other and the DB,
     runs the Groq relevancy filter, then bulk-creates passing jobs.
@@ -53,28 +54,34 @@ def _save_jobs(jobs_data: list, source_label: str = "") -> int:
 
     logger.info(f"{tag} {len(new_jobs)} new jobs to filter and save.")
 
-    # 3. Groq relevancy filter (slow — may take many minutes for large batches)
-    filtered = filter_jobs(new_jobs)
+    # 3. Groq relevancy filter — keyword pre-filter + batch scoring
+    filtered = filter_jobs(new_jobs, user_query=user_query)
 
     if not filtered:
         logger.info(f"{tag} No jobs passed the relevancy filter (score >= 0.6).")
         return 0
 
-    # 4. Build model objects
+
+    # 4. Build model objects — truncate CharFields to their DB max_length
+    #    to prevent "value too long for type character varying(N)" errors.
+    def _t(value: str, max_len: int) -> str:
+        s = str(value) if value else ''
+        return s[:max_len]
+
     job_objects = [
         Job(
-            title=j.get('title', ''),
-            company=j.get('company', ''),
-            company_domain=j.get('company_domain', ''),
-            location=j.get('location', ''),
-            experience_required=j.get('experience_required', ''),
-            source=j.get('source', ''),
-            source_url=j.get('source_url', ''),
+            title=_t(j.get('title', ''), 200),
+            company=_t(j.get('company', ''), 200),
+            company_domain=_t(j.get('company_domain', ''), 200),
+            location=_t(j.get('location', ''), 200),
+            experience_required=_t(j.get('experience_required', ''), 500),
+            source=_t(j.get('source', ''), 50),
+            source_url=_t(j.get('source_url', ''), 500),
             jd_text=j.get('jd_text', ''),
             relevancy_score=j.get('relevancy_score', 0.5),
             skills_extracted=j.get('skills_extracted', []),
             posted_at=j.get('posted_at', timezone.now()),
-            dedup_hash=j.get('dedup_hash', ''),
+            dedup_hash=_t(j.get('dedup_hash', ''), 64),
             is_active=True,
         )
         for j in filtered
@@ -113,7 +120,7 @@ def scrape_internshala(self, query: str, location: str, date_hours: int = 24) ->
         scraper = InternshalaScraper()
         jobs = scraper.search(query, location, date_hours)
         print(f"[Internshala] Got {len(jobs)} jobs from scraper")
-        return _save_jobs(jobs, source_label="Internshala")
+        return _save_jobs(jobs, source_label="Internshala", user_query=query)
     except Exception as exc:
         logger.error(f"[Internshala] Task error: {exc}")
         raise self.retry(exc=exc)
@@ -138,7 +145,7 @@ def scrape_naukri(self, query: str, location: str, date_hours: int = 24) -> int:
 
         jobs = scraper.search(query, location, date_hours)
         print(f"[Naukri] Got {len(jobs)} jobs from scraper")
-        return _save_jobs(jobs, source_label="Naukri")
+        return _save_jobs(jobs, source_label="Naukri", user_query=query)
     except Exception as exc:
         logger.error(f"[Naukri] Task error: {exc}")
         raise self.retry(exc=exc)
@@ -154,16 +161,16 @@ def scrape_indeed(self, query: str, location: str, date_hours: int = 24) -> int:
     logger.info(f"[Indeed] Starting scrape: '{query}' in '{location}'")
     print(f"[Indeed] Scraping '{query}' in '{location}'...")
 
-    if not os.environ.get("APIFY_API_KEY"):
-        logger.warning("[Indeed] No APIFY_API_KEY — skipping Indeed scraper")
-        print("[Indeed] Skipped — no APIFY_API_KEY")
-        return 0
-
     try:
-        scraper = ApifyIndeedScraper()
+        if os.environ.get("APIFY_API_KEY"):
+            scraper = ApifyIndeedScraper()
+        else:
+            logger.warning("[Indeed] No APIFY_API_KEY — falling back to Playwright scraper")
+            scraper = IndeedScraper()
+
         jobs = scraper.search(query, location, date_hours)
         print(f"[Indeed] Got {len(jobs)} jobs from scraper")
-        return _save_jobs(jobs, source_label="Indeed")
+        return _save_jobs(jobs, source_label="Indeed", user_query=query)
     except Exception as exc:
         logger.error(f"[Indeed] Task error: {exc}")
         raise self.retry(exc=exc)

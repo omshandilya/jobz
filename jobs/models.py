@@ -14,7 +14,7 @@ class Job(models.Model):
     company = models.CharField(max_length=200)
     company_domain = models.CharField(max_length=200, blank=True)
     location = models.CharField(max_length=200)
-    experience_required = models.CharField(max_length=100, blank=True)
+    experience_required = models.CharField(max_length=500, blank=True)
     source = models.CharField(max_length=50, choices=SOURCE_CHOICES)
     source_url = models.URLField(max_length=500)
     jd_text = models.TextField()

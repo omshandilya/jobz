@@ -120,8 +120,10 @@ class JobSearchView(APIView):
         cutoff_date = timezone.now() - timedelta(hours=date_hours)
         queryset = queryset.filter(Q(posted_at__gte=cutoff_date) | Q(fetched_at__gte=cutoff_date))
 
-        if location and location.lower() != 'all':
-            queryset = queryset.filter(location__icontains=location)
+        if location:
+            loc_lower = location.lower()
+            if loc_lower not in ['all', 'india']:
+                queryset = queryset.filter(location__icontains=location)
 
         words = [w.strip() for w in re.split(r'\s+', q) if w.strip()]
         if words:

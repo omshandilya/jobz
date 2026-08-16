@@ -15,18 +15,54 @@ logger = logging.getLogger(__name__)
 class ApifyNaukriScraper(BaseScraper):
     ACTOR_ID = "logiover/naukri-job-scraper"
 
+    # logiover actor only accepts specific city values; map generic inputs
+    _LOCATION_MAP = {
+        'india': '',
+        'all': '',
+        'delhi': 'delhi-ncr',
+        'new delhi': 'delhi-ncr',
+        'ncr': 'delhi-ncr',
+        'delhi ncr': 'delhi-ncr',
+        'bengaluru': 'bangalore',
+        'gurugram': 'gurgaon',
+        'gurugram/gurgaon': 'gurgaon',
+        'bombay': 'mumbai',
+    }
+    _VALID_LOCATIONS = {
+        '', 'bangalore', 'mumbai', 'delhi-ncr', 'hyderabad', 'pune',
+        'chennai', 'kolkata', 'ahmedabad', 'gurgaon', 'noida', 'jaipur',
+        'chandigarh', 'kochi', 'coimbatore', 'indore', 'remote'
+    }
+
+    def _normalize_location(self, location: str) -> str:
+        loc = location.strip().lower()
+        # Try direct map
+        if loc in self._LOCATION_MAP:
+            return self._LOCATION_MAP[loc]
+        # Already a valid value
+        if loc in self._VALID_LOCATIONS:
+            return loc
+        # Partial match — pick first valid city found in string
+        for valid in sorted(self._VALID_LOCATIONS, key=len, reverse=True):
+            if valid and valid in loc:
+                return valid
+        # Fallback: return empty string (actor treats it as "all India")
+        logger.warning(f'[ApifyNaukri] Unknown location "{location}" — defaulting to all-India')
+        return ''
+
     def search(self, query: str, location: str, date_hours: int = 24) -> List[Dict[str, Any]]:
         api_key = os.environ.get("APIFY_API_KEY")
         if not api_key:
             logger.error("APIFY_API_KEY not found in environment")
             return []
 
+        actor_location = self._normalize_location(location)
         client = ApifyClient(api_key)
         try:
-            logger.info(f"[ApifyNaukri] Calling actor '{self.ACTOR_ID}' for '{query}' in '{location}'")
+            logger.info(f"[ApifyNaukri] Calling actor '{self.ACTOR_ID}' for '{query}' in '{actor_location or 'all-India'}'")
             run = client.actor(self.ACTOR_ID).call(run_input={
                 "keyword": query,
-                "location": location,
+                "location": actor_location,
                 "maxResults": 50,
                 "maxItems": 50,
             })

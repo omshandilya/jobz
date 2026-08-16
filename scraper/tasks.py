@@ -9,6 +9,7 @@ from scraper.scrapers.naukri import NaukriScraper
 from scraper.scrapers.apify_naukri import ApifyNaukriScraper
 from scraper.scrapers.apify_indeed import ApifyIndeedScraper
 from scraper.scrapers.indeed import IndeedScraper
+from scraper.scrapers.linkedin_google import LinkedInGoogleScraper
 from scraper.filter import filter_jobs
 
 logger = logging.getLogger(__name__)
@@ -176,6 +177,25 @@ def scrape_indeed(self, query: str, location: str, date_hours: int = 24) -> int:
         raise self.retry(exc=exc)
 
 
+@shared_task(bind=True, max_retries=1, default_retry_delay=60)
+def scrape_linkedin(self, query: str, location: str, date_hours: int = 24) -> int:
+    """
+    LinkedIn Google Scraper (~30-60s). Uses Playwright to search Google for LinkedIn jobs.
+    """
+    connection.close()
+    logger.info(f"[LinkedIn] Starting scrape: '{query}' in '{location}'")
+    print(f"[LinkedIn] Scraping '{query}' in '{location}'...")
+
+    try:
+        scraper = LinkedInGoogleScraper()
+        jobs = scraper.search(query, location, date_hours)
+        print(f"[LinkedIn] Got {len(jobs)} jobs from scraper")
+        return _save_jobs(jobs, source_label="LinkedIn", user_query=query)
+    except Exception as exc:
+        logger.error(f"[LinkedIn] Task error: {exc}")
+        raise self.retry(exc=exc)
+
+
 # ---------------------------------------------------------------------------
 # Dispatcher — triggers all 3 scraper tasks
 # ---------------------------------------------------------------------------
@@ -188,13 +208,14 @@ def run_scrapers(query: str, location: str, date_hours: int = 24) -> str:
     and are surfaced to the frontend via polling.
     """
     logger.info(f"Dispatching 3 scraper tasks for '{query}' in '{location}'")
-    print(f"Dispatching scrapers: Internshala, Naukri, Indeed for '{query}' in '{location}'")
+    print(f"Dispatching scrapers: Internshala, Naukri, Indeed, LinkedIn for '{query}' in '{location}'")
 
     scrape_internshala.delay(query, location, date_hours)
     scrape_naukri.delay(query, location, date_hours)
     scrape_indeed.delay(query, location, date_hours)
+    scrape_linkedin.delay(query, location, date_hours)
 
-    return f"Dispatched 3 scraper tasks for '{query}' in '{location}'"
+    return f"Dispatched 4 scraper tasks for '{query}' in '{location}'"
 
 
 # ---------------------------------------------------------------------------
@@ -213,7 +234,8 @@ def run_periodic_scrapers() -> str:
         scrape_internshala.delay(q.query, q.location)
         scrape_naukri.delay(q.query, q.location)
         scrape_indeed.delay(q.query, q.location)
+        scrape_linkedin.delay(q.query, q.location)
         q.last_scraped_at = timezone.now()
         q.save(update_fields=['last_scraped_at'])
 
-    return f"Triggered 3-task scraping for {queries.count()} queries."
+    return f"Triggered 4-task scraping for {queries.count()} queries."

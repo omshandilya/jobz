@@ -7,6 +7,7 @@ class Job(models.Model):
         ('internshala', 'Internshala'),
         ('indeed', 'Indeed'),
         ('instahyre', 'Instahyre'),
+        ('linkedin', 'LinkedIn'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

@@ -147,16 +147,19 @@ body {
 .source-tab { color: var(--muted); background: var(--input); border: 1px solid var(--border); }
 .source-tab:hover { border-color: var(--primary); color: var(--primary); }
 .source-tab-active { background: linear-gradient(135deg, #2563eb, #0ea5e9); }
-.job-card { min-width: 0; }
+.job-card { min-width: 0; margin: .4rem; }
 .job-card:hover { box-shadow: 0 18px 36px var(--shadow); }
-.job-card-body { min-width: 0; }
-.job-company-row { color: var(--muted); }
-.job-company { color: var(--foreground); font-size: .875rem; font-weight: 650; min-width: 0; }
+.job-card-body { min-width: 0; padding: 2rem 2.25rem !important; text-align: center; }
+.job-card-layout { width: 100%; }
+.job-company-row { color: var(--muted); width: 100%; }
+.job-company { color: var(--foreground); font-size: .875rem; font-weight: 650; min-width: 0; max-width: min(100%, 34rem); }
+.job-source-row { width: 100%; }
+.location-pill { color: var(--muted); background: var(--surface-subtle); border: 1px solid var(--border); }
 .job-title { color: var(--primary); }
 .job-title-clamp { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .skill-tag, .outreach-button { color: var(--primary); background: color-mix(in srgb, var(--primary) 9%, var(--card)); border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border)); }
 .outreach-button:hover { background: color-mix(in srgb, var(--primary) 16%, var(--card)); }
-.job-description { color: var(--muted); background: var(--surface-subtle); border: 1px solid var(--border); }
+.job-description { color: var(--muted); background: var(--surface-subtle); border: 1px solid var(--border); text-align: center; }
 .job-description-clamp { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 5; }
 .details-button { color: var(--muted); background: var(--surface-subtle); border: 1px solid var(--border); }
 .details-button:hover { color: var(--primary); border-color: var(--primary); }
@@ -177,4 +180,6 @@ body {
   .hero-card { border-radius: 1.5rem; }
   .job-search-button { width: 100%; }
   .job-card-score { min-width: 72px; }
+  .job-card { margin: .2rem; }
+  .job-card-body { padding: 1.5rem 1.25rem !important; }
 }

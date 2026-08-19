@@ -68,23 +68,25 @@ export default function JobCard({ job }: JobCardProps) {
   return (
     <article className="job-card section-card rounded-[1.5rem] overflow-hidden hover:-translate-y-0.5 transition-all duration-200">
       <div className="job-card-body p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="job-card-layout flex flex-col items-center gap-4">
           <div className="flex-1 min-w-0">
             <h3 className="job-title job-title-clamp text-base font-semibold leading-snug mb-2 break-words">
               {job.title}
             </h3>
-            <div className="job-company-row flex items-center gap-2 min-w-0 mb-3">
+            <div className="job-company-row flex items-center justify-center gap-2 min-w-0">
               <Building2 size={14} className="shrink-0" />
               <span className="job-company truncate">{job.company}</span>
-              <SourceBadge source={job.source} />
             </div>
-
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="job-source-row flex flex-wrap items-center justify-center gap-2 mt-2 mb-3">
+              <SourceBadge source={job.source} />
               {job.location && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600">
+                <span className="location-pill inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs">
                   <MapPin size={11} /> {job.location}
                 </span>
               )}
+            </div>
+
+            <div className="job-card-meta flex flex-wrap justify-center gap-2 mb-4">
               {job.experience_required && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600">
                   <Briefcase size={11} /> {job.experience_required}
@@ -93,7 +95,7 @@ export default function JobCard({ job }: JobCardProps) {
             </div>
 
             {visibleSkills.length > 0 && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-center gap-2">
                 {visibleSkills.map((skill) => (
                   <span
                     key={skill}
@@ -111,7 +113,7 @@ export default function JobCard({ job }: JobCardProps) {
             )}
           </div>
 
-          <div className="job-card-score flex flex-col items-end gap-2 shrink-0">
+          <div className="job-card-score flex flex-col items-center gap-2 shrink-0">
             <div
               className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                 score >= 80
@@ -139,7 +141,7 @@ export default function JobCard({ job }: JobCardProps) {
       </div>
 
       <div
-        className="job-card-actions px-5 sm:px-6 pb-5 sm:pb-6 flex flex-wrap gap-2"
+        className="job-card-actions px-5 sm:px-6 pb-5 sm:pb-6 flex flex-wrap justify-center gap-2"
         onClick={(e) => e.stopPropagation()}
       >
         {job.jd_preview && (

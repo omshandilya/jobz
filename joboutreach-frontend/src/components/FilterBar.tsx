@@ -20,7 +20,6 @@ const SOURCE_TABS: { label: string; value: SourceFilter }[] = [
   { label: 'Naukri', value: 'naukri' },
   { label: 'Internshala', value: 'internshala' },
   { label: 'Indeed', value: 'indeed' },
-  { label: 'LinkedIn', value: 'linkedin' },
 ]
 
 const DATE_OPTIONS = [

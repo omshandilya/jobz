@@ -14,7 +14,6 @@ const SOURCE_CONFIG: Record<Job['source'], { label: string; color: string; bg: s
   naukri: { label: 'Naukri', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
   internshala: { label: 'Internshala', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
   indeed: { label: 'Indeed', color: 'text-indigo-700', bg: 'bg-indigo-50 border-indigo-200' },
-  linkedin: { label: 'LinkedIn', color: 'text-sky-700', bg: 'bg-sky-50 border-sky-200' },
   instahyre: { label: 'Instahyre', color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
 }
 

@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Job, SearchQuery
 from .serializers import JobSerializer, JobDetailSerializer
-from scraper.tasks import run_scrapers, scrape_internshala, scrape_naukri, scrape_indeed, scrape_linkedin
+from scraper.tasks import run_scrapers, scrape_internshala, scrape_naukri, scrape_indeed
 
 logger = logging.getLogger(__name__)
 
@@ -73,13 +73,12 @@ class JobSearchView(APIView):
 
             dispatched_via_celery = False
             try:
-                # Dispatch all 4 tasks independently so each saves to DB as it finishes
+                # Dispatch all 3 tasks independently so each saves to DB as it finishes
                 scrape_internshala.delay(q, location, date_hours)
                 scrape_naukri.delay(q, location, date_hours)
                 scrape_indeed.delay(q, location, date_hours)
-                scrape_linkedin.delay(q, location, date_hours)
                 dispatched_via_celery = True
-                logger.info(f"Dispatched 4 Celery scraper tasks for '{q}' in '{location}'")
+                logger.info(f"Dispatched 3 Celery scraper tasks for '{q}' in '{location}'")
             except Exception as celery_err:
                 # Celery worker not reachable — fall back to background thread
                 logger.warning(

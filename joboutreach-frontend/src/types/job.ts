@@ -5,7 +5,7 @@ export interface Job {
   company_domain: string
   location: string
   experience_required: string
-  source: 'naukri' | 'internshala' | 'indeed' | 'instahyre' | 'linkedin'
+  source: 'naukri' | 'internshala' | 'indeed' | 'instahyre'
   source_url: string
   relevancy_score: number
   skills_extracted: string[]
@@ -23,4 +23,4 @@ export interface SearchResponse {
 }
 
 export type SortMode = 'relevant' | 'recent'
-export type SourceFilter = 'all' | 'naukri' | 'internshala' | 'indeed' | 'instahyre' | 'linkedin'
+export type SourceFilter = 'all' | 'naukri' | 'internshala' | 'indeed' | 'instahyre'

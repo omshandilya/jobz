@@ -31,18 +31,18 @@ const POLL_MAX_DURATION_MS = 180_000
 
 function EmptyState({ onSuggest }: { onSuggest: (q: string) => void }) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-4">
-        <Search size={28} className="text-indigo-400" />
+    <div className="empty-state flex flex-col items-center justify-center py-20 text-center">
+      <div className="empty-state-icon w-16 h-16 rounded-2xl flex items-center justify-center mb-4">
+        <Search size={28} />
       </div>
-      <h3 className="text-lg font-semibold text-gray-800 mb-1">No jobs found</h3>
-      <p className="text-gray-500 text-sm mb-6">Try different keywords or broaden your search</p>
+      <h3 className="text-lg font-semibold mb-1">No jobs found</h3>
+      <p className="text-sm mb-6">Try different keywords or broaden your search</p>
       <div className="flex flex-wrap gap-2 justify-center">
         {SUGGESTED.map((s) => (
           <button
             key={s}
             onClick={() => onSuggest(s)}
-            className="px-4 py-2 rounded-full bg-white border border-slate-200 text-sm text-blue-700 hover:border-blue-300 hover:bg-blue-50 transition-all font-medium shadow-sm"
+            className="suggestion-chip px-4 py-2 rounded-full text-sm transition-all font-medium"
           >
             {s}
           </button>
@@ -214,22 +214,22 @@ function HomeContent() {
         )}
       </Navbar>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
+      <main className="results-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-8">
         {/* Hero section — shown before first search */}
         {!searched && (
-          <div className="section-card relative overflow-hidden rounded-[2rem] px-6 py-12 sm:px-10 sm:py-16 text-center">
+          <div className="hero-card section-card relative overflow-hidden rounded-[2rem] px-6 py-12 sm:px-10 sm:py-16 text-center">
             <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_40%)]" />
             <div className="relative">
-              <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-4 py-1 text-xs font-semibold text-blue-700 mb-6">
+              <div className="eyebrow inline-flex items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold mb-6">
                 AI-powered job search and outreach
               </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-tight mb-4">
+              <h1 className="hero-title text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight mb-4">
                 Find jobs.{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-sky-600 to-cyan-600">
                   Reach the right people.
                 </span>
               </h1>
-              <p className="mx-auto max-w-2xl text-base sm:text-lg text-slate-600 mb-8">
+              <p className="hero-copy mx-auto max-w-2xl text-base sm:text-lg mb-8">
                 Search across Naukri, Indeed, and Internshala with less clutter, clearer filters, and a calmer results view.
               </p>
               <div className="max-w-3xl mx-auto">
@@ -240,7 +240,7 @@ function HomeContent() {
                   <button
                     key={s}
                     onClick={() => handleSuggest(s)}
-                    className="px-4 py-2 rounded-full bg-white border border-slate-200 text-sm text-blue-700 hover:border-blue-300 hover:bg-blue-50 transition-all font-medium shadow-sm"
+                    className="suggestion-chip px-4 py-2 rounded-full text-sm transition-all font-medium"
                   >
                     {s}
                   </button>
@@ -253,6 +253,9 @@ function HomeContent() {
         {/* Filter bar — shown after first search */}
         {searched && (
           <div className="section-card rounded-2xl px-4 py-4 sm:px-5 sm:py-5">
+            <div className="md:hidden mb-4">
+              <SearchBar initialQuery={query} onSearch={handleSearch} loading={loading} />
+            </div>
             <FilterBar
               location={location}
               onLocationChange={setLocation}
@@ -269,7 +272,7 @@ function HomeContent() {
 
         {/* "Fetching more..." banner — shown while background scrapers are running */}
         {isPolling && searched && !loading && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-blue-50 border border-blue-100 text-sm text-blue-700 font-medium">
+          <div className="status-banner flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium">
             <RefreshCw size={14} className="animate-spin shrink-0" />
             <span>
               Fetching from Naukri &amp; Indeed in the background
@@ -304,7 +307,7 @@ function HomeContent() {
             ))}
           </div>
         )}
-      </div>
+      </main>
 
       {/* Global modals */}
       <AuthModal />

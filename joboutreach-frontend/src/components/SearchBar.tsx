@@ -18,11 +18,11 @@ export default function SearchBar({ initialQuery = '', onSearch, loading }: Sear
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full">
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+    <form onSubmit={handleSubmit} className="job-search-form w-full">
+      <div className="job-search-row flex flex-col sm:flex-row gap-3">
+        <div className="job-search-field relative flex-1">
           <Search
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+            className="search-icon job-search-icon absolute left-4 top-1/2 -translate-y-1/2"
             size={20}
           />
           <input
@@ -30,13 +30,13 @@ export default function SearchBar({ initialQuery = '', onSearch, loading }: Sear
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="backend engineer fresher delhi..."
-            className="soft-input w-full pl-12 pr-4 py-4 text-base rounded-2xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder:text-slate-400"
+            className="soft-input job-search-input w-full text-base rounded-2xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
           />
         </div>
         <button
           type="submit"
           disabled={loading || !query.trim()}
-          className="px-7 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold rounded-2xl transition-all duration-150 flex items-center justify-center gap-2 whitespace-nowrap shadow-sm"
+          className="primary-button job-search-button disabled:bg-blue-300 text-white font-semibold rounded-2xl transition-all duration-150 flex items-center justify-center gap-2 whitespace-nowrap"
         >
           {loading ? (
             <>
